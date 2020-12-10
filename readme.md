@@ -1,0 +1,1 @@
+Repository for Quarkus version of the StockQuote
