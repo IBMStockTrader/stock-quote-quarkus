@@ -77,9 +77,7 @@ oc apply -f manifests/quarkus/deployment-stock-quote.yaml
 ```
 - or using Knative Service:
 ```
-oc apply -f manifests/quarkus/deployment-stock-quote.yaml
-```
-knative-stock-quote.yaml
+oc apply -f manifests/quarkus/knative-stock-quote.yaml
 ```
 
 Test deployed service adding following URI `/stock-quote/IBM` to the created route.
