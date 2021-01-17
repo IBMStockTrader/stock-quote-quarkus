@@ -52,9 +52,9 @@ docker build --no-cache -t stock-quote-quarkus:latest .
 If you dont have docker locally you can build directly on OpenShift cluster:
 
 ```
-oc apply -f manifests/build/is-quarkus-maven.yaml
-oc apply -f manifests/build/is-stock-quote-quarkus.yaml
-oc apply -f manifests/build/bc-stock-quote-quarkus.yaml
+oc apply -f manifests/build-img/is-quarkus-maven.yaml
+oc apply -f manifests/build-img/is-stock-quote-quarkus.yaml
+oc apply -f manifests/build-img/bc-stock-quote-quarkus.yaml
 ```
 
 Once the image is build (it will take several minutes 10-20) you can deploy the the service.
