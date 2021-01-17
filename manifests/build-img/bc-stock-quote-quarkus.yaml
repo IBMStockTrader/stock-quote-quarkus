@@ -1,0 +1,29 @@
+kind: BuildConfig
+apiVersion: build.openshift.io/v1
+metadata:
+  name: stock-quote-quarkus
+  labels:
+    app: stock-quote-quarkus
+spec:
+  triggers:
+    - type: GitHub
+      github:
+        secretReference: 
+          name: git-webhook
+    - type: ImageChange
+    - type: ConfigChange
+  source:
+    type: Git
+    git:
+      uri: 'https://github.com/IBMStockTrader/stock-quote-quarku.git'
+      ref: master
+  strategy:
+    type: Docker
+    dockerStrategy:
+      from:
+        kind: ImageStreamTag
+        name: 'centos-quarkus-maven:20.2.0-java11'
+  output:
+    to:
+      kind: ImageStreamTag
+      name: 'stock-quote-quarkus:jwt'

@@ -1,0 +1,15 @@
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+metadata:
+  annotations:
+  name: centos-quarkus-maven
+  labels:
+    app: stock-quote-quarkus
+spec:
+  tags:
+    - name: 20.2.0-java11
+      from:
+        kind: DockerImage
+        name: 'quay.io/quarkus/centos-quarkus-maven:20.2.0-java11'
+      importPolicy:
+        scheduled: true
