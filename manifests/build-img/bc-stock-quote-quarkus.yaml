@@ -26,4 +26,4 @@ spec:
   output:
     to:
       kind: ImageStreamTag
-      name: 'stock-quote-quarkus:latest'
+      name: 'stock-quote-quarkus:basic-auth'
