@@ -33,7 +33,7 @@ usual, then adds it to **Redis** so it's there for next time.
 
 The *Java for Redis*, or **Jedis**, library is used for communicating with **Redis**.
 
-This branch describes how the *stock-quote* can be deployed using Quarkus with Basic authentication for easier testing.
+This branch describes how the *stock-quote* can be deployed using Quarkus with JWT authentication.
 
 If you will be using your own version of Redis, make sure to import certificate and rebuild the image.
 
