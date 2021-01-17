@@ -1,0 +1,36 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: stock-quote-quarkus
+  labels:
+    app: stock-quote-quarkus  
+spec:
+  template:
+    spec:
+      containers:
+        - image: >-
+            image-registry.openshift-image-registry.svc:5000/stock-quote-quarkus/stock-quote-quarkus:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redis
+                  key: redis.url
+            - name: MP_JWT_VERIFY_PUBLICKEY
+              valueFrom:
+                configMapKeyRef:
+                  name: jwt-config
+                  key: jwt-ca.crt
+            - name: MP_JWT_VERIFY_ISSUER
+              valueFrom:
+                configMapKeyRef:
+                  name: jwt-config
+                  key: mp.jwt.verify.issuer
+            - name: SMALLRYE_JWT_VERIFY_AUD
+              valueFrom:
+                configMapKeyRef:
+                  name: jwt-config
+                  key: smallrye.jwt.verify.aud                        
+            

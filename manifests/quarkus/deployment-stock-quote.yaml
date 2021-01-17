@@ -1,0 +1,77 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  annotations:
+    image.openshift.io/triggers: >-
+      [{"from":{"kind":"ImageStreamTag","name":"stock-quote-quarkus:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"stock-quote-quarkus\")].image"}]
+  name: stock-quote-quarkus
+  labels:
+    app: stock-quote-quarkus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stock-quote-quarkus
+  template:
+    metadata:
+      labels:
+        app: stock-quote-quarkus
+    spec:
+      containers:
+        - name: stock-quote-quarkus
+          image: stock-quote-quarkus
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redis
+                  key: redis.url
+            - name: MP_JWT_VERIFY_PUBLICKEY
+              valueFrom:
+                configMapKeyRef:
+                  name: jwt-config
+                  key: jwt-ca.crt
+            - name: MP_JWT_VERIFY_ISSUER
+              valueFrom:
+                configMapKeyRef:
+                  name: jwt-config
+                  key: mp.jwt.verify.issuer
+            - name: SMALLRYE_JWT_VERIFY_AUD
+              valueFrom:
+                configMapKeyRef:
+                  name: jwt-config
+                  key: smallrye.jwt.verify.aud                  
+                  
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: stock-quote-quarkus
+  labels:
+    app: stock-quote-quarkus
+spec:
+  ports:
+    - name: 8080-tcp
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: stock-quote-quarkus
+    deploymentconfig: stock-quote-quarkus
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: stock-quote-quarkus
+  labels:
+    app: stock-quote-quarkus
+spec:
+  to:
+    kind: Service
+    name: stock-quote-quarkus
+  port:
+    targetPort: 8080-tcp
+ 
