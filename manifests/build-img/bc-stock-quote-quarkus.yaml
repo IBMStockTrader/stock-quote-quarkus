@@ -15,8 +15,8 @@ spec:
   source:
     type: Git
     git:
-      uri: 'https://github.com/gasgithub/stock-quote.git'
-      ref: quarkus
+      uri: 'https://github.com/IBMStockTrader/stock-quote-quarku.git'
+      ref: basic-auth
   strategy:
     type: Docker
     dockerStrategy:
