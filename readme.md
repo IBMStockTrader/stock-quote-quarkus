@@ -33,4 +33,30 @@ usual, then adds it to **Redis** so it's there for next time.
 
 The *Java for Redis*, or **Jedis**, library is used for communicating with **Redis**.
 
-This branch describes how the *stock-quote* can be deployed using Quarkus.
+This branch describes how the *stock-quote* can be deployed using Quarkus with Basic authentication for easier testing.
+
+If you will be using your own version of Redis, make sure to import certificate and rebuild the image.
+
+Import certificate using following command:
+
+```
+keytool -importcert -file redis-ca.pem -alias redis-ca -keystore mycerts3 -storepass changeit 
+```
+
+To build locally run (you need docker runtime locally):
+
+```
+docker build --no-cache -t stock-quote-quarkus:latest .  
+```
+
+If you dont have docker locally you can build directly on OpenShift cluster:
+
+```
+oc apply -f manifests/is-quarkus-maven.yaml
+oc apply -f manifests/is-stock-quote-quarkus.yaml
+oc apply -f bc-stock-quote-quarkus.yaml
+```
+
+Once the image is build (it will take several minutes 10-20) you can deploy the the service.
+Create required resources (update 
+
