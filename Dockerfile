@@ -21,7 +21,7 @@ RUN chmod 775 /work /work/application \
   && chown -R 1001 /work \
   && chmod -R "g+rwX" /work \
   && chown -R 1001:root /work
-EXPOSE 8080
+EXPOSE 9080
 USER 1001
 # resetting base image entrypoint with ENTRYPOINT [] doesnt work , so overriding here instead of using CMD
 ENTRYPOINT ["./application", "-Dquarkus.http.host=0.0.0.0"]

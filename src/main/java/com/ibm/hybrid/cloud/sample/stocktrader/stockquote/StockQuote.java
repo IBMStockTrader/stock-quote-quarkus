@@ -29,19 +29,15 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.enterprise.context.ApplicationScoped;
 //CDI 1.2
 import javax.inject.Inject;
 //JSON-B (JSR 367).  This largely replaces the need for JSON-P
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
-import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-//JAX-RS 2.0 (JSR 339)
-import javax.ws.rs.core.Application;
 
 //mpFaultTolerance 1.1
 import org.eclipse.microprofile.faulttolerance.Fallback;
@@ -58,12 +54,10 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
 
-@ApplicationPath("/")
+
 @Path("/stock-quote") 
-//###Quarkus @Path("/")
-@ApplicationScoped
 /** This version of StockQuote talks to API Connect (which talks to api.iextrading.com) */
-public class StockQuote extends Application {
+public class StockQuote {
 	private static Logger logger = Logger.getLogger(StockQuote.class.getName());
 	
 	private static JedisPool jedisPool = null;

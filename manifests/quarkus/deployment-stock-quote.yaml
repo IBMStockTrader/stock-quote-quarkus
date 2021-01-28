@@ -21,7 +21,7 @@ spec:
         - name: stock-quote-quarkus
           image: stock-quote-quarkus
           ports:
-            - containerPort: 8080
+            - containerPort: 9080
               protocol: TCP
           env:
             - name: REDIS_URL
@@ -54,10 +54,10 @@ metadata:
     app: stock-quote-quarkus
 spec:
   ports:
-    - name: 8080-tcp
+    - name: 9080-tcp
       protocol: TCP
-      port: 8080
-      targetPort: 8080
+      port: 9080
+      targetPort: 9080
   selector:
     app: stock-quote-quarkus
     deploymentconfig: stock-quote-quarkus
@@ -73,5 +73,5 @@ spec:
     kind: Service
     name: stock-quote-quarkus
   port:
-    targetPort: 8080-tcp
+    targetPort: 9080-tcp
  
