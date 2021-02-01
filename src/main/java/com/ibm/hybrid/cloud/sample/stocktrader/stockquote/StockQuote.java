@@ -50,8 +50,8 @@ import com.ibm.hybrid.cloud.sample.stocktrader.stockquote.json.Quote;
 
 //Jedis (Java for Redis)
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
+//import redis.clients.jedis.JedisPool;
+//import redis.clients.jedis.JedisPoolConfig;
 
 
 
@@ -60,7 +60,9 @@ import redis.clients.jedis.JedisPoolConfig;
 public class StockQuote {
 	private static Logger logger = Logger.getLogger(StockQuote.class.getName());
 	
-	private static JedisPool jedisPool = null;
+	// switching to single connection - workaround for quarkus pool issues
+	//private static JedisPool jedisPool = null;
+	private static Jedis jedisPool = null;
 	
 	private URI jedisURI = null;
 	private boolean initialized = false;
@@ -130,10 +132,11 @@ public class StockQuote {
 				logger.info("Initializing JedisPool using URL: "+redis_url);
 				
 				//### Quarkus - disable jmx in jedis
-				JedisPoolConfig jedisConfiguration = new JedisPoolConfig();
-				jedisConfiguration.setJmxEnabled(false);
+				// JedisPoolConfig jedisConfiguration = new JedisPoolConfig();
+				// jedisConfiguration.setJmxEnabled(false);
 				logger.info("Initializing JedisPool");
-				jedisPool = new JedisPool(jedisConfiguration, jedisURI);
+				//jedisPool = new JedisPool(jedisConfiguration, jedisURI);
+				jedisPool = new Jedis(jedisURI);
 			}
 	
 			try {
@@ -187,7 +190,7 @@ public class StockQuote {
 		ArrayList<Quote> quotes = new ArrayList<Quote>();
 		Jedis jedis = null;
 		if (jedisPool != null) try {
-			jedis =  jedisPool.getResource(); 
+			jedis =  new Jedis(jedisURI); //jedisPool.getResource(); 
 			
 
 			Set<String> keys = jedis.keys("*");
@@ -230,7 +233,7 @@ public class StockQuote {
 		if (jedisPool != null) {
 			try {
 		
-			Jedis jedis = jedisPool.getResource(); 
+			Jedis jedis = new Jedis(jedisURI); //jedisPool.getResource(); 
 			if (jedis==null) logger.warning("Unable to get connection to Redis from pool");
 
 			logger.info("Getting "+symbol+" from Redis");
