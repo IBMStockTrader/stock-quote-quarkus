@@ -3,7 +3,7 @@ apiVersion: apps/v1
 metadata:
   annotations:
     image.openshift.io/triggers: >-
-      [{"from":{"kind":"ImageStreamTag","name":"stock-quote-quarkus:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"stock-quote-quarkus\")].image"}]
+      [{"from":{"kind":"ImageStreamTag","name":"stock-quote-quarkus:basic-auth"},"fieldPath":"spec.template.spec.containers[?(@.name==\"stock-quote-quarkus\")].image"}]
   name: stock-quote-quarkus
   labels:
     app: stock-quote-quarkus
@@ -60,7 +60,6 @@ spec:
       targetPort: 9080
   selector:
     app: stock-quote-quarkus
-    deploymentconfig: stock-quote-quarkus
 ---
 kind: Route
 apiVersion: route.openshift.io/v1
