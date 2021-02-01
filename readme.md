@@ -43,10 +43,16 @@ Import certificate using following command:
 keytool -importcert -file redis-ca.pem -alias redis-ca -keystore mycerts3 -storepass changeit 
 ```
 
-To build locally run (you need docker runtime locally):
+To build locally issue (you need docker runtime locally):
 
 ```
 docker build --no-cache -t stock-quote-quarkus:latest .  
+```
+
+To run locally in docker issu:
+
+```
+docker run --rm -p 9080:9080 stock-quote-quarkus:latest
 ```
 
 If you dont have docker locally you can build directly on OpenShift cluster:

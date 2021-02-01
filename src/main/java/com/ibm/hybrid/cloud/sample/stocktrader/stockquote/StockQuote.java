@@ -22,6 +22,7 @@ import java.io.StringWriter;
 import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
@@ -49,19 +50,24 @@ import com.ibm.hybrid.cloud.sample.stocktrader.stockquote.client.IEXClient;
 import com.ibm.hybrid.cloud.sample.stocktrader.stockquote.json.Quote;
 
 //Jedis (Java for Redis)
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
+// import redis.clients.jedis.Jedis;
+// import redis.clients.jedis.JedisPool;
+// import redis.clients.jedis.JedisPoolConfig;
 
+// Quarkus redis
+import io.quarkus.redis.client.RedisClient;
+import io.vertx.redis.client.Response;
 
-
-@Path("/stock-quote") 
+@Path("/stock-quote")
 /** This version of StockQuote talks to API Connect (which talks to api.iextrading.com) */
+
 public class StockQuote {
 	private static Logger logger = Logger.getLogger(StockQuote.class.getName());
-	
-	private static JedisPool jedisPool = null;
-	
+
+	// private static JedisPool jedisPool = null;
+	@Inject
+	RedisClient redisClient;
+
 	private URI jedisURI = null;
 	private boolean initialized = false;
 
@@ -93,8 +99,8 @@ public class StockQuote {
 			t.printStackTrace();
 		}
 	}
-	
-	private void initializeApp() {  
+
+	private void initializeApp() {
 		/* Example deployment yaml stanza:
 		spec:
 		  containers:
@@ -120,22 +126,23 @@ public class StockQuote {
 			return ;
 		}
 		initialized = true;
-    	logger.info("The application is initializing...");
+		logger.info("The application is initializing...");
 		logger.info("Redis URL: " + System.getenv("REDIS_URL"));
-		
+
 		try {
-			if (jedisPool == null && System.getenv("REDIS_URL") != null) { //the pool is static; the connections within the pool are obtained as needed
-				String redis_url = System.getenv("REDIS_URL");
-				jedisURI = new URI(redis_url);
-				logger.info("Initializing JedisPool using URL: "+redis_url);
-				
-				//### Quarkus - disable jmx in jedis
-				JedisPoolConfig jedisConfiguration = new JedisPoolConfig();
-				jedisConfiguration.setJmxEnabled(false);
-				logger.info("Initializing JedisPool");
-				jedisPool = new JedisPool(jedisConfiguration, jedisURI);
-			}
-	
+			// if (jedisPool == null && System.getenv("REDIS_URL") != null) { //the pool is
+			// static; the connections within the pool are obtained as needed
+			// String redis_url = System.getenv("REDIS_URL");
+			// jedisURI = new URI(redis_url);
+			// logger.info("Initializing JedisPool using URL: "+redis_url);
+
+			// //### Quarkus - disable jmx in jedis
+			// JedisPoolConfig jedisConfiguration = new JedisPoolConfig();
+			// jedisConfiguration.setJmxEnabled(false);
+			// logger.info("Initializing JedisPool");
+			// jedisPool = new JedisPool(jedisConfiguration, jedisURI);
+			// }
+
 			try {
 				String cache_string = System.getenv("CACHE_INTERVAL");
 				if (cache_string != null) {
@@ -149,7 +156,7 @@ public class StockQuote {
 		} catch (Throwable t) {
 			logException(t);
 		}
-		
+
 		String mpUrlPropName = APIConnectClient.class.getName() + "/mp-rest/url";
 		String urlFromEnv = System.getenv("APIC_URL");
 		if ((urlFromEnv != null) && !urlFromEnv.isEmpty()) {
@@ -167,13 +174,13 @@ public class StockQuote {
 		} else {
 			logger.info("IEX URL not found from env var from config map, so defaulting to value in jvm.options: " + System.getProperty(mpUrlPropName));
 		}
-	
+
 		iexApiKey = System.getenv("IEX_API_KEY");
 		if ((iexApiKey == null) || iexApiKey.isEmpty()) {
 			logger.warning("No API key provided for IEX.  If API Connect isn't available, fallback to direct calls to IEX will fail");
 		}
 
-    }
+	}
 
 
 	@GET
@@ -185,16 +192,15 @@ public class StockQuote {
 		initializeApp();
 		Quote[] quoteArray = new Quote[] {};
 		ArrayList<Quote> quotes = new ArrayList<Quote>();
-		Jedis jedis = null;
-		if (jedisPool != null) try {
-			jedis =  jedisPool.getResource(); 
-			
+		// Jedis jedis = null;
+		if (redisClient != null)
+			try {
 
-			Set<String> keys = jedis.keys("*");
-			Iterator<String> iter = keys.iterator();
+			Response keys = redisClient.keys("*");
+			Iterator<Response> iter = keys.iterator();
 			while (iter.hasNext()) {
-				String key = iter.next();
-				String cachedValue = jedis.get(key);
+				String key = iter.next().toString();
+				String cachedValue = redisClient.get(key).toString();
 				logger.info("Found this in Redis for "+key+": "+cachedValue);
 
 				Jsonb jsonb = JsonbBuilder.create();
@@ -204,9 +210,6 @@ public class StockQuote {
 			}
 		} catch (Throwable t) {
 			logException(t);
-		}
-		finally {
-			if(jedis != null) jedis.close();
 		}
 		return quotes.toArray(quoteArray);
 	}
@@ -227,19 +230,17 @@ public class StockQuote {
 		}
 
 		Quote quote = null;
-		if (jedisPool != null) {
+		if (redisClient != null) {
 			try {
-		
-			Jedis jedis = jedisPool.getResource(); 
-			if (jedis==null) logger.warning("Unable to get connection to Redis from pool");
+
 
 			logger.info("Getting "+symbol+" from Redis");
-			String cachedValue = jedis.get(symbol); //Try to get it from Redis
+			String cachedValue = redisClient.get(symbol).toString(); //Try to get it from Redis
 			if (cachedValue == null) { //It wasn't in Redis
 				logger.info(symbol+" wasn't in Redis so we will try to put it there");
 				quote = apiConnectClient.getStockQuoteViaAPIConnect(symbol); //so go get it like we did before we'd ever heard of Redis
 				logger.info("Got quote for "+symbol+" from API Connect");
-				jedis.set(symbol, quote.toString()); //Put in Redis so it's there next time we ask
+				redisClient.set(Arrays.asList(symbol, quote.toString())); //Put in Redis so it's there next time we ask
 				logger.info("Put "+symbol+" in Redis");
 			} else {
 				logger.info("Got this from Redis for "+symbol+": "+cachedValue);
@@ -257,7 +258,7 @@ public class StockQuote {
 					try {
 						quote = apiConnectClient.getStockQuoteViaAPIConnect(symbol); //so go get a less stale value
 						logger.info("Got quote for "+symbol+" from API Connect");
-						jedis.set(symbol, quote.toString()); //Put in Redis so it's there next time we ask
+						redisClient.set(Arrays.asList(symbol, quote.toString())); //Put in Redis so it's there next time we ask
 						logger.info("Refreshed "+symbol+" in Redis");
 					} catch (Throwable t) {
 						logger.info("Error getting fresh quote; using cached value instead");
@@ -269,7 +270,6 @@ public class StockQuote {
 			}
 
 			logger.info("Completed getting stock quote - releasing Redis resources");
-			jedis.close(); //Release resource
 		} catch (Throwable t) {
 			logException(t);
 			
