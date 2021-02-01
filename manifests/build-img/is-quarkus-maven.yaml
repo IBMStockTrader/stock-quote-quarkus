@@ -7,9 +7,10 @@ metadata:
     app: stock-quote-quarkus
 spec:
   tags:
-    - name: 20.2.0-java11
+    - name: 20.3.0-java11
       from:
         kind: DockerImage
-        name: 'quay.io/quarkus/centos-quarkus-maven:20.2.0-java11'
+        name: 'quay.io/quarkus/centos-quarkus-maven:20.3.0-java11'
       importPolicy:
         scheduled: true
+        

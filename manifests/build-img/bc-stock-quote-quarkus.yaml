@@ -22,7 +22,7 @@ spec:
     dockerStrategy:
       from:
         kind: ImageStreamTag
-        name: 'centos-quarkus-maven:20.2.0-java11'
+        name: 'centos-quarkus-maven:20.3.0-java11'
   output:
     to:
       kind: ImageStreamTag

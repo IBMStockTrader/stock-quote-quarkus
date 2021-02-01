@@ -29,19 +29,15 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.enterprise.context.ApplicationScoped;
 //CDI 1.2
 import javax.inject.Inject;
 //JSON-B (JSR 367).  This largely replaces the need for JSON-P
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
-import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-//JAX-RS 2.0 (JSR 339)
-import javax.ws.rs.core.Application;
 
 //mpFaultTolerance 1.1
 import org.eclipse.microprofile.faulttolerance.Fallback;
@@ -54,19 +50,19 @@ import com.ibm.hybrid.cloud.sample.stocktrader.stockquote.json.Quote;
 
 //Jedis (Java for Redis)
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
+//import redis.clients.jedis.JedisPool;
+//import redis.clients.jedis.JedisPoolConfig;
 
 
-@ApplicationPath("/")
 @Path("/stock-quote") 
 //###Quarkus @Path("/")
-@ApplicationScoped
 /** This version of StockQuote talks to API Connect (which talks to api.iextrading.com) */
-public class StockQuote extends Application {
+public class StockQuote {
 	private static Logger logger = Logger.getLogger(StockQuote.class.getName());
 	
-	private static JedisPool jedisPool = null;
+	// switching to single connection - workaround for quarkus pool issues
+	//private static JedisPool jedisPool = null;
+	private static Jedis jedisPool = null;
 	
 	private URI jedisURI = null;
 	private boolean initialized = false;
@@ -136,10 +132,11 @@ public class StockQuote extends Application {
 				logger.info("Initializing JedisPool using URL: "+redis_url);
 				
 				//### Quarkus - disable jmx in jedis
-				JedisPoolConfig jedisConfiguration = new JedisPoolConfig();
-				jedisConfiguration.setJmxEnabled(false);
+				// JedisPoolConfig jedisConfiguration = new JedisPoolConfig();
+				// jedisConfiguration.setJmxEnabled(false);
 				logger.info("Initializing JedisPool");
-				jedisPool = new JedisPool(jedisConfiguration, jedisURI);
+				//jedisPool = new JedisPool(jedisConfiguration, jedisURI);
+				jedisPool = new Jedis(jedisURI);
 			}
 	
 			try {
@@ -193,7 +190,7 @@ public class StockQuote extends Application {
 		ArrayList<Quote> quotes = new ArrayList<Quote>();
 		Jedis jedis = null;
 		if (jedisPool != null) try {
-			jedis =  jedisPool.getResource(); 
+			jedis =  new Jedis(jedisURI); //jedisPool.getResource(); 
 			
 
 			Set<String> keys = jedis.keys("*");
@@ -236,7 +233,7 @@ public class StockQuote extends Application {
 		if (jedisPool != null) {
 			try {
 		
-			Jedis jedis = jedisPool.getResource(); 
+			Jedis jedis =  new Jedis(jedisURI); //jedisPool.getResource(); 
 			if (jedis==null) logger.warning("Unable to get connection to Redis from pool");
 
 			logger.info("Getting "+symbol+" from Redis");
