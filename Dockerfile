@@ -1,5 +1,5 @@
 ## Stage 1 : build with maven builder image with native capabilities
-FROM quay.io/quarkus/centos-quarkus-maven:21.2.0-java11 AS build
+FROM quay.io/quarkus/centos-quarkus-maven:21.0.0-java11 AS build
 COPY pom.xml /usr/src/app/
 COPY src/main/resources/mycerts3 /tmp/mycerts3
 RUN mvn -f /usr/src/app/pom.xml -B de.qaware.maven:go-offline-maven-plugin:1.2.5:resolve-dependencies
