@@ -46,8 +46,12 @@ keytool -importcert -file redis-ca.pem -alias redis-ca -keystore mycerts3 -store
 To build locally run (you need docker runtime locally):
 
 ```
-docker build --no-cache -t stock-quote-quarkus:latest .  
+docker build --no-cache -t stock-quote-quarkus:basic .  
 ```
+
+To run locally in docker issu:
+
+docker run --rm -p 9080:9080 -e REDIS_URL=rediss://user:pass@host:port/0 stock-quote-quarkus:basic
 
 If you dont have docker locally you can build directly on OpenShift cluster:
 

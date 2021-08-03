@@ -24,7 +24,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 @QuarkusTest
 public class QuarkusHealthEndpointTest {
 
-    private static String endpoint = "/health";
+    private static String endpoint = "/q/health";
 
     @Test
     public void testEndpoint() throws Exception {

@@ -19,12 +19,11 @@ package com.ibm.hybrid.cloud.sample.stocktrader.stockquote;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.List;
 //Logging (JSR 47)
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -44,27 +43,28 @@ import org.eclipse.microprofile.faulttolerance.Fallback;
 //mpRestClient 1.0
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
+import io.quarkus.cache.CacheResult;
+import io.quarkus.redis.client.RedisClient;
+import io.vertx.redis.client.Response;
+
 import com.ibm.hybrid.cloud.sample.stocktrader.stockquote.client.APIConnectClient;
 import com.ibm.hybrid.cloud.sample.stocktrader.stockquote.client.IEXClient;
 import com.ibm.hybrid.cloud.sample.stocktrader.stockquote.json.Quote;
 
-//Jedis (Java for Redis)
-import redis.clients.jedis.Jedis;
-//import redis.clients.jedis.JedisPool;
-//import redis.clients.jedis.JedisPoolConfig;
-
 
 @Path("/stock-quote") 
-//###Quarkus @Path("/")
+
 /** This version of StockQuote talks to API Connect (which talks to api.iextrading.com) */
 public class StockQuote {
 	private static Logger logger = Logger.getLogger(StockQuote.class.getName());
 	
-	// switching to single connection - workaround for quarkus pool issues
-	//private static JedisPool jedisPool = null;
-	private static Jedis jedisPool = null;
+
+  @Inject
+	RedisClient redisClient;
+
 	
-	private URI jedisURI = null;
+	private boolean redisEnabled = false;
+
 	private boolean initialized = false;
 
 	private static final long MINUTE_IN_MILLISECONDS = 60000;
@@ -122,23 +122,13 @@ public class StockQuote {
 			return ;
 		}
 		initialized = true;
-    	logger.info("The application is initializing...");
-		logger.info("Redis URL: " + System.getenv("REDIS_URL"));
+		logger.info("The application is initializing...");
+		String redis_url = System.getenv("REDIS_URL");
+		logger.info("Redis URL: " + redis_url);
+		if(redis_url != null) redisEnabled = true;
+		logger.info("Redisclient: " + redisClient);
 		
 		try {
-			if (jedisPool == null && System.getenv("REDIS_URL") != null) { //the pool is static; the connections within the pool are obtained as needed
-				String redis_url = System.getenv("REDIS_URL");
-				jedisURI = new URI(redis_url);
-				logger.info("Initializing JedisPool using URL: "+redis_url);
-				
-				//### Quarkus - disable jmx in jedis
-				// JedisPoolConfig jedisConfiguration = new JedisPoolConfig();
-				// jedisConfiguration.setJmxEnabled(false);
-				logger.info("Initializing JedisPool");
-				//jedisPool = new JedisPool(jedisConfiguration, jedisURI);
-				jedisPool = new Jedis(jedisURI);
-			}
-	
 			try {
 				String cache_string = System.getenv("CACHE_INTERVAL");
 				if (cache_string != null) {
@@ -184,34 +174,40 @@ public class StockQuote {
 	@Produces("application/json")
 //	@RolesAllowed({"StockTrader", "StockViewer"}) //Couldn't get this to work; had to do it through the web.xml instead :(
 	/**  Get all stock quotes in Redis.  This is a read-only operation that just returns what's already there, without any refreshing */
-	public Quote[] getAllCachedQuotes() {
+	public List<Quote> getAllCachedQuotes() {
 		initializeApp();
-		Quote[] quoteArray = new Quote[] {};
 		ArrayList<Quote> quotes = new ArrayList<Quote>();
-		Jedis jedis = null;
-		if (jedisPool != null) try {
-			jedis =  new Jedis(jedisURI); //jedisPool.getResource(); 
-			
 
-			Set<String> keys = jedis.keys("*");
-			Iterator<String> iter = keys.iterator();
-			while (iter.hasNext()) {
-				String key = iter.next();
-				String cachedValue = jedis.get(key);
-				logger.info("Found this in Redis for "+key+": "+cachedValue);
+		logger.info("get all redisAPI:" + redisClient);
 
-				Jsonb jsonb = JsonbBuilder.create();
-				Quote quote = jsonb.fromJson(cachedValue, Quote.class);
+		if ( redisEnabled && redisClient != null) { 
+		 try {
 
-				quotes.add(quote);
+			Response keys = redisClient.keys("*");
+			for(Response r : keys) {
+				String key = r.toString();
+				logger.info("key:" + key);
+				try {
+					String cachedQuote = redisClient.get(key).toString();
+					logger.info("cachedQuote:" + cachedQuote);
+					Jsonb jsonb = JsonbBuilder.create();
+					Quote quote = jsonb.fromJson(cachedQuote, Quote.class);
+					quotes.add(quote);
+
+				}
+				catch(Exception ignoredInvalid){
+					logger.info("ivalid:" + key);
+				}
 			}
+			return quotes;
 		} catch (Throwable t) {
 			logException(t);
 		}
 		finally {
-			if(jedis != null) jedis.close();
 		}
-		return quotes.toArray(quoteArray);
+	}
+		 logger.info("empty quotes");
+		 return quotes;
 	}
 
 	@GET
@@ -230,19 +226,22 @@ public class StockQuote {
 		}
 
 		Quote quote = null;
-		if (jedisPool != null) {
+		if (redisEnabled && redisClient != null) {
 			try {
 		
-			Jedis jedis =  new Jedis(jedisURI); //jedisPool.getResource(); 
-			if (jedis==null) logger.warning("Unable to get connection to Redis from pool");
-
 			logger.info("Getting "+symbol+" from Redis");
-			String cachedValue = jedis.get(symbol); //Try to get it from Redis
-			if (cachedValue == null) { //It wasn't in Redis
+			Response responseSymbol = redisClient.get(symbol);
+			String cachedValue = null;
+			if(responseSymbol != null) {
+				cachedValue = responseSymbol.toString();
+			}
+			logger.info("cachedQuote:" + cachedValue);
+
+  			if (cachedValue == null) { //It wasn't in Redis
 				logger.info(symbol+" wasn't in Redis so we will try to put it there");
-				quote = apiConnectClient.getStockQuoteViaAPIConnect(symbol); //so go get it like we did before we'd ever heard of Redis
+				quote = getStockQuoteViaAPI(symbol); //so go get it like we did before we'd ever heard of Redis
 				logger.info("Got quote for "+symbol+" from API Connect");
-				jedis.set(symbol, quote.toString()); //Put in Redis so it's there next time we ask
+				redisClient.set(Arrays.asList(symbol, quote.toString())); // Put in Redis so it's there next time we ask
 				logger.info("Put "+symbol+" in Redis");
 			} else {
 				logger.info("Got this from Redis for "+symbol+": "+cachedValue);
@@ -258,9 +257,9 @@ public class StockQuote {
 				if (isStale(quote)) {
 					logger.info(symbol+" in Redis was too stale");
 					try {
-						quote = apiConnectClient.getStockQuoteViaAPIConnect(symbol); //so go get a less stale value
+						quote = getStockQuoteViaAPI(symbol); //so go get a less stale value
 						logger.info("Got quote for "+symbol+" from API Connect");
-						jedis.set(symbol, quote.toString()); //Put in Redis so it's there next time we ask
+						redisClient.set(Arrays.asList(symbol, quote.toString())); // Put in Redis so it's there next time we ask
 						logger.info("Refreshed "+symbol+" in Redis");
 					} catch (Throwable t) {
 						logger.info("Error getting fresh quote; using cached value instead");
@@ -272,13 +271,13 @@ public class StockQuote {
 			}
 
 			logger.info("Completed getting stock quote - releasing Redis resources");
-			jedis.close(); //Release resource
+
 		} catch (Throwable t) {
 			logException(t);
 			
 			//something went wrong using Redis.  Fall back to the old-fashioned direct approach
 			try {
-				quote = apiConnectClient.getStockQuoteViaAPIConnect(symbol);
+				quote = getStockQuoteViaAPI(symbol);
 				logger.info("Got quote for "+symbol+" from API Connect");
 			} catch (Throwable t2) {
 				logException(t2);
@@ -290,7 +289,7 @@ public class StockQuote {
 			//Redis not configured.  Fall back to the old-fashioned direct approach
 			try {
 				logger.warning("Redis URL not configured, so driving call directly to API Connect");
-				quote = apiConnectClient.getStockQuoteViaAPIConnect(symbol);
+				quote = getStockQuoteViaAPI(symbol);
 				logger.info("Got quote for "+symbol+" from API Connect");
 			} catch (Throwable t3) {
 				logException(t3);
@@ -300,6 +299,17 @@ public class StockQuote {
 
 		return quote;
 	}
+
+	@CacheResult(cacheName = "quote")
+	public Quote getStockQuoteViaAPI(String symbol) throws IOException {
+		logger.warning("Call directly to API Connect - caching internally in quarkus");
+		Quote quote = apiConnectClient.getStockQuoteViaAPIConnect(symbol);
+		logger.warning("Quote from API Connect:" + quote.toString());
+		return quote;
+		
+	}
+
+
 
 	/** When API Connect is unavailable, fall back to calling IEX directly to get the stock quote */
 	public Quote getStockQuoteViaIEX(String symbol) throws IOException {
@@ -312,6 +322,8 @@ public class StockQuote {
 
 		long now = System.currentTimeMillis();
 		long then = quote.getTime();
+		logger.info("now: "+now+" then: "+then);
+
 
 		if (then==0) return true; //no time value present in quote
 		long difference = now - then;
