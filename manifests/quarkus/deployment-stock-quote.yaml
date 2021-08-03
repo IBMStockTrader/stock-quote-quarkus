@@ -3,7 +3,7 @@ apiVersion: apps/v1
 metadata:
   annotations:
     image.openshift.io/triggers: >-
-      [{"from":{"kind":"ImageStreamTag","name":"stock-quote-quarkus:basic-auth"},"fieldPath":"spec.template.spec.containers[?(@.name==\"stock-quote-quarkus\")].image"}]
+      [{"from":{"kind":"ImageStreamTag","name":"stock-quote-quarkus:jwt"},"fieldPath":"spec.template.spec.containers[?(@.name==\"stock-quote-quarkus\")].image"}]
   name: stock-quote-quarkus
   labels:
     app: stock-quote-quarkus

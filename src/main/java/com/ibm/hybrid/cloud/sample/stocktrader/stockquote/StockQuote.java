@@ -51,13 +51,17 @@ import com.ibm.hybrid.cloud.sample.stocktrader.stockquote.client.APIConnectClien
 import com.ibm.hybrid.cloud.sample.stocktrader.stockquote.client.IEXClient;
 import com.ibm.hybrid.cloud.sample.stocktrader.stockquote.json.Quote;
 
+
 @Path("/stock-quote") 
+
 /** This version of StockQuote talks to API Connect (which talks to api.iextrading.com) */
 public class StockQuote {
 	private static Logger logger = Logger.getLogger(StockQuote.class.getName());
 	
-    @Inject
+
+  @Inject
 	RedisClient redisClient;
+
 	
 	private boolean redisEnabled = false;
 

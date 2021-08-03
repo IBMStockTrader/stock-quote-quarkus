@@ -9,7 +9,7 @@ spec:
     spec:
       containers:
         - image: >-
-            image-registry.openshift-image-registry.svc:5000/stock-quote-quarkus/stock-quote-quarkus:latest
+            image-registry.openshift-image-registry.svc:5000/stock-quote-quarkus/stock-quote-quarkus:jwt
           ports:
             - containerPort: 9080
           env:
